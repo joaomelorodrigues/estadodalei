@@ -1,0 +1,150 @@
+---
+import type { StatusDTO } from "@estadodalei/shared";
+import { api } from "@/lib/api";
+import { todayInLisbon } from "@/lib/format";
+
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+const year = new Date().getFullYear();
+
+// Repositório público do código (licença AGPL-3.0: o site tem de indicar onde está o código).
+const SOURCE_URL = "https://github.com/joaomelorodrigues/estadodalei";
+
+// Quando foram sincronizados os dados oficiais (mostrado a todos, para transparência).
+let status: StatusDTO | null = null;
+try {
+  status = await api<StatusDTO>("/status");
+} catch {
+  // Sem API não se mostra a data (a página mostra o aviso próprio).
+}
+const lastSync = status?.jobs.parliament.lastSuccessAt ?? null;
+function describe(iso: string): string {
+  const d = new Date(iso);
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(d);
+  const time = new Intl.DateTimeFormat("pt-PT", { timeZone: "Europe/Lisbon", hour: "2-digit", minute: "2-digit" }).format(d);
+  const today = todayInLisbon();
+  const yesterday = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Lisbon" }).format(new Date(Date.now() - 86_400_000));
+  if (day === today) return `hoje às ${time}`;
+  if (day === yesterday) return `ontem às ${time}`;
+  return `${day.split("-").reverse().join("/")} às ${time}`;
+}
+---
+
+<footer class:list={["border-t border-border bg-white", className ?? "mt-20"]}>
+  <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+    <div class="grid gap-10 md:grid-cols-12">
+      <div class="md:col-span-5 space-y-3">
+        <a href="/" class="inline-flex items-center gap-2.5">
+          <div class="flex size-8 items-center justify-center rounded-lg bg-primary text-white">
+            <svg viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 20h18" />
+              <path d="M6 20v-8M12 20v-8M18 20v-8" />
+              <path d="M3 10l9-6 9 6H3Z" fill="currentColor" />
+            </svg>
+          </div>
+          <span class="font-editorial text-lg font-extrabold tracking-tight text-foreground">
+            estadodalei<span class="text-primary">.pt</span>
+          </span>
+        </a>
+        <p class="max-w-sm text-sm leading-relaxed text-muted-foreground">
+          Serviço cívico independente que traduz as propostas da Assembleia da República e os diplomas do Governo para português simples e claro.
+        </p>
+        <p class="flex max-w-sm items-start gap-2 text-sm leading-relaxed text-muted-foreground">
+          <svg viewBox="0 0 24 24" class="mt-[3px] size-4 shrink-0 text-primary" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m16 18 6-6-6-6" />
+            <path d="m8 6-6 6 6 6" />
+          </svg>
+          <span>
+            <span class="font-semibold text-foreground">Projeto de código aberto.</span>
+            Qualquer pessoa pode ver como os dados oficiais são recolhidos e contados, e contribuir.
+            {SOURCE_URL && (
+              <a
+                href={SOURCE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="whitespace-nowrap font-medium text-primary hover:underline"
+              >
+                Ver o código no GitHub ↗
+              </a>
+            )}
+          </span>
+        </p>
+        <p class="text-xs leading-relaxed text-muted-foreground/85">
+          As explicações em linguagem simples não substituem a consulta do texto legal oficial publicado no Diário da República.
+        </p>
+      </div>
+
+      <div class="md:col-span-3 space-y-2.5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-foreground">Explorar</h4>
+        <ul class="space-y-2 text-sm text-muted-foreground">
+          <li><a href="/" class="font-medium hover:text-primary transition-colors">Resumo de hoje</a></li>
+          <li><a href="/para-mim" class="font-medium hover:text-primary transition-colors">O que muda para mim</a></li>
+        </ul>
+      </div>
+
+      <div class="md:col-span-4 space-y-2.5">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-foreground">Fontes oficiais</h4>
+        <ul class="space-y-2 text-sm text-muted-foreground">
+          <li>
+            <a
+              href="https://www.parlamento.pt/Cidadania/Paginas/DadosAbertos.aspx"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium hover:text-primary transition-colors"
+            >
+              Assembleia da República — Dados Abertos ↗
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://diariodarepublica.pt"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium hover:text-primary transition-colors"
+            >
+              Diário da República Eletrónico ↗
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://www.portugal.gov.pt"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium hover:text-primary transition-colors"
+            >
+              Portal do Governo de Portugal ↗
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://dados.gov.pt"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-medium hover:text-primary transition-colors"
+            >
+              dados.gov.pt — Dados Abertos ↗
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="mt-10 flex flex-col gap-2 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+      <span>© {year} estadodalei.pt · Informação cívica aberta, sem filiação partidária, com <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" class="underline decoration-border underline-offset-2 hover:text-primary">código aberto</a>.</span>
+      <span class="inline-flex items-center gap-2">
+        {lastSync && (
+          <span
+            class={`size-2 rounded-full ${status?.ok ? "bg-emerald-500" : "bg-amber-500"}`}
+            title={status?.ok ? "Dados em dia" : "Sincronização atrasada"}
+          />
+        )}
+        {lastSync
+          ? `Dados oficiais atualizados ${describe(lastSync)} · ${status?.legislature} Legislatura`
+          : "Assembleia da República — Dados Abertos"}
+      </span>
+    </div>
+  </div>
+</footer>

@@ -1,0 +1,33 @@
+{
+  "name": "@estadodalei/api",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "sync": "tsx src/cli/sync.ts",
+    "sync:prod": "node dist/cli/sync.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@estadodalei/shared": "workspace:*",
+    "compression": "^1.8.2",
+    "express": "^5.3.0",
+    "fast-xml-parser": "^5.12.1",
+    "helmet": "^8.3.0",
+    "mongoose": "^9.12.3",
+    "node-cron": "^4.6.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.8.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.6.6",
+    "tsup": "^9.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

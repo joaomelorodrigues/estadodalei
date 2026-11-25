@@ -1,0 +1,45 @@
+---
+import MainLayout from "@/layouts/MainLayout.astro";
+import { PersonalImpactSimulator } from "@/components/PersonalImpactSimulator";
+import type { InitiativeSummaryDTO, Paginated } from "@estadodalei/shared";
+import ApiUnavailable from "@/components/ApiUnavailable.astro";
+import { api } from "@/lib/api";
+import { toProposal } from "@/lib/adapt";
+
+let proposals: ReturnType<typeof toProposal>[] | null = null;
+try {
+  // Só iniciativas com explicação revista dizem quem é afetado.
+  const page = await api<Paginated<InitiativeSummaryDTO>>("/initiatives?explained=true&pageSize=50");
+  proposals = page.items.map((s) => toProposal(s));
+} catch (err) {
+  console.error("[para-mim] API indisponível:", err);
+  Astro.response.status = 503;
+}
+Astro.response.headers.set("Cache-Control", "public, max-age=60");
+---
+
+<MainLayout
+  title="Afeta-me a Mim? — Simulador Legislativo | estadodalei.pt"
+  description="Escolhe o teu perfil e descobre imediatamente quais as leis aprovadas ou em votação em Portugal que afetam a tua carteira e os teus direitos."
+  currentPath="/para-mim"
+>
+  <section class="bg-[#135BFF] text-white">
+    <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <div class="max-w-3xl space-y-2.5">
+        <span class="text-xs font-bold uppercase tracking-wider text-blue-100">
+          Ferramenta para o Cidadão
+        </span>
+        <h1 class="font-editorial text-3xl sm:text-4xl font-extrabold text-white">
+          O que é que estas leis mudam para mim?
+        </h1>
+        <p class="text-sm sm:text-base text-blue-100 leading-relaxed font-medium">
+          Não precisas de ler dezenas de documentos oficiais. Indica a tua situação (trabalho, casa, idade, família) e mostramos as leis que, segundo explicações revistas, têm impacto direto na tua vida.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    {proposals ? <PersonalImpactSimulator client:load proposals={proposals} /> : <ApiUnavailable />}
+  </div>
+</MainLayout>

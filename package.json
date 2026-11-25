@@ -1,0 +1,27 @@
+{
+  "name": "estadodalei",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "docker compose up -d --wait mongo && pnpm --parallel --filter @estadodalei/api --filter @estadodalei/site dev",
+    "db": "docker compose up -d --wait mongo",
+    "stack": "docker build -t estadodalei:latest . && docker compose up -d --wait",
+    "stack:stop": "docker compose stop",
+    "build": "pnpm --filter @estadodalei/site build && pnpm --filter @estadodalei/api build",
+    "start": "pnpm --filter @estadodalei/api start",
+    "sync": "docker compose up -d --wait mongo && pnpm --filter @estadodalei/api sync",
+    "typecheck": "pnpm -r typecheck",
+    "deploy": "scripts/deploy-portainer.sh"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joaomelorodrigues/estadodalei.git"
+  }
+}

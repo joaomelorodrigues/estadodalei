@@ -1,0 +1,61 @@
+# Plataforma completa do estadodalei.pt, numa stack: MongoDB + aplicação (site, API e sincronização).
+# O mesmo ficheiro corre no Mac (Docker Desktop) e no NAS (stack "estadodalei" no Portainer).
+#
+#   No Mac:  pnpm stack        constrói a imagem estadodalei:latest e faz docker compose up -d
+#            pnpm dev          arranca só o MongoDB da stack e os servidores de desenvolvimento
+#   No NAS:  pnpm run deploy   constrói a imagem no NAS e cria/atualiza a stack pelo Portainer
+#
+# A imagem da app é construída fora do compose (pnpm stack / deploy), porque no Portainer
+# a stack não tem o código ao lado.
+#
+# Variáveis (no .env ao lado deste ficheiro, ou nas variáveis da stack no Portainer):
+#   MONGO_IMAGE    mongo:4.4 em todo o lado: o CPU do DS918+ não tem AVX, e o MongoDB 5+ não
+#                  arranca sem AVX. Assim o Mac usa a mesma versão que o NAS.
+#   SITE_PORT      porta do site na máquina (4000 no Mac, 20003 no NAS)
+#   SITE_BIND      127.0.0.1 = só a própria máquina; 0.0.0.0 = toda a rede (NAS, como os outros sites)
+#   MONGO_PORT     porta do MongoDB na própria máquina (27018, livre no Mac e no NAS)
+#   HEARTBEAT_URL, ADMIN_TOKEN   opcionais (ver README)
+#
+# Compatível com o Docker 24 do NAS: nada de opções que exijam o Docker 25+.
+name: estadodalei
+
+services:
+  mongo:
+    image: ${MONGO_IMAGE:-mongo:4.4}
+    restart: unless-stopped
+    # Cache pequena: a base de dados tem poucas dezenas de MB e a máquina é partilhada.
+    command: ["--wiredTigerCacheSizeGB", "0.5"]
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      # MongoDB Compass e `pnpm dev`: mongodb://127.0.0.1:27018/estadodalei
+      # Só na própria máquina (127.0.0.1): o MongoDB não tem palavra-passe.
+      - "127.0.0.1:${MONGO_PORT:-27018}:27017"
+    healthcheck:
+      # A imagem 4.4 só tem o shell "mongo"; as mais recentes só têm o "mongosh".
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok' || mongo --quiet --eval 'db.adminCommand({ping:1}).ok'"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  app:
+    image: estadodalei:latest
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "${SITE_BIND:-127.0.0.1}:${SITE_PORT:-4000}:4000"
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/estadodalei
+      PORT: "4000"
+      LEGISLATURE: auto
+      SYNC_CRON: "15 */3 * * *"
+      SYNC_ON_START: "true"
+      SYNC_TIMEOUT_MIN: "30"
+      HEARTBEAT_URL: ${HEARTBEAT_URL:-}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+
+volumes:
+  mongo-data:
