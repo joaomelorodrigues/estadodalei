@@ -4,7 +4,7 @@
  * A AR publica votações por grupo (e exceções individuais), não o voto nominal de todos,
  * por isso isto é uma representação: lugares do grupo × sentido de voto do grupo.
  */
-import type { VoteDTO } from "@estadodalei/shared";
+import type { VoteSides } from "@/data/types";
 import { SEATING_ORDER } from "@/data/groups";
 import type { VotePosition } from "@/data/types";
 import { partyVotes, type PartyVote } from "@/lib/adapt";
@@ -97,7 +97,7 @@ const VOTE_BLOCK_ORDER: SeatState[] = ["favor", "abstencao", "ausente", "sem-dad
  */
 export function buildSeats(
   composition: Record<string, number>,
-  vote: VoteDTO | null,
+  vote: VoteSides | null,
   order: "seating" | "vote" = "seating",
 ): Seat[] {
   const parties = [

@@ -12,7 +12,7 @@ import {
   type VoteSideDTO,
 } from "@estadodalei/shared";
 import { AUTHOR_TYPE_LABELS } from "@/data/groups";
-import type { LegislativeProposal, ProposalStatus, VotePosition, VoteRecord } from "@/data/types";
+import type { HeroProposal, LegislativeProposal, ProposalStatus, VotePosition, VoteRecord, VoteSides } from "@/data/types";
 import { formatDate } from "@/lib/format";
 
 const stageIndex = (stage: string) => Math.max(0, STAGES.findIndex((s) => s.id === stage));
@@ -42,7 +42,7 @@ const POSITION_LABEL: Record<VotePosition, string> = {
 };
 
 /** Lados da votação na ordem usada no site. */
-export function voteSides(v: VoteDTO): [VotePosition, VoteSideDTO[]][] {
+export function voteSides(v: VoteSides): [VotePosition, VoteSideDTO[]][] {
   return [
     ["favor", v.inFavour],
     ["abstencao", v.abstention],
@@ -67,7 +67,7 @@ export interface PartyVote {
 }
 
 /** Agrega os lados da votação por grupo parlamentar. */
-export function partyVotes(v: VoteDTO): PartyVote[] {
+export function partyVotes(v: VoteSides): PartyVote[] {
   const acc = new Map<
     string,
     { groupLevel: VotePosition[]; counted: Partial<Record<VotePosition, number>>; names: Partial<Record<VotePosition, string[]>> }
@@ -199,6 +199,37 @@ export function toProposal(s: InitiativeSummaryDTO, keyVote?: VoteDTO | null): L
     debate: e?.debate ?? { pros: [], cons: [] },
     officialLinks: { parlamentoUrl: parlamentoInitiativeUrl(s.id) },
   };
+}
+
+/** Só o que o hero da página inicial usa (ver HeroProposal). */
+export function toHeroProposal(p: LegislativeProposal): HeroProposal {
+  const hero: HeroProposal = {
+    id: p.id,
+    slug: p.slug,
+    code: p.code,
+    author: p.author,
+    officialTitle: p.officialTitle,
+    plainTitle: p.plainTitle,
+    shortHook: p.shortHook,
+    kidTranslation: p.kidTranslation,
+    citizenSummary: p.citizenSummary,
+    status: p.status,
+    statusStep: p.statusStep,
+    affectedGroups: p.affectedGroups,
+    beforeAfter: p.beforeAfter,
+    officialLinks: { parlamentoUrl: p.officialLinks.parlamentoUrl },
+  };
+  if (p.votes) {
+    const { phase, date, result, unanimous, raw } = p.votes;
+    hero.votes = {
+      phase,
+      date,
+      result,
+      unanimous,
+      raw: { inFavour: raw.inFavour, against: raw.against, abstention: raw.abstention, absent: raw.absent },
+    };
+  }
+  return hero;
 }
 
 /** "A favor: PSD, CDS-PP. Contra: CH, PS. Abstenção: IL." */

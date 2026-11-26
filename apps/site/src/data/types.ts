@@ -134,6 +134,33 @@ export interface LegislativeProposal {
   diplomas?: DiplomaDTO[];
 }
 
+/** Só os lados de uma votação (o que o hemiciclo precisa). */
+export type VoteSides = Pick<VoteDTO, "inFavour" | "against" | "abstention" | "absent">;
+
+/**
+ * Proposta no hero da página inicial: só os campos que o hero e a janela "saber mais" usam.
+ * As props das ilhas vão no HTML antes do conteúdo; menos dados = o título aparece mais cedo.
+ */
+export type HeroProposal = Pick<
+  LegislativeProposal,
+  | "id"
+  | "slug"
+  | "code"
+  | "author"
+  | "officialTitle"
+  | "plainTitle"
+  | "shortHook"
+  | "kidTranslation"
+  | "citizenSummary"
+  | "status"
+  | "statusStep"
+  | "affectedGroups"
+  | "beforeAfter"
+> & {
+  officialLinks: Pick<LegislativeProposal["officialLinks"], "parlamentoUrl">;
+  votes?: Pick<VoteRecord, "phase" | "date" | "result" | "unanimous"> & { raw: VoteSides };
+};
+
 export interface CitizenGroupMeta {
   id: CitizenGroupId;
   label: string;

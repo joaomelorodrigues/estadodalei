@@ -1,4 +1,11 @@
 ---
+// Fontes servidas pelo próprio site (sem pedidos ao Google): Figtree no texto,
+// Red Hat Display nos títulos e JetBrains Mono nalguns números.
+import "@fontsource-variable/figtree/wght.css";
+import "@fontsource-variable/red-hat-display/wght.css";
+import "@fontsource-variable/jetbrains-mono/wght.css";
+import figtreeLatin from "@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2?url";
+import redHatLatin from "@fontsource-variable/red-hat-display/files/red-hat-display-latin-wght-normal.woff2?url";
 import "@/styles/global.css";
 import Navbar from "@/components/Navbar.astro";
 import Footer from "@/components/Footer.astro";
@@ -29,14 +36,11 @@ const {
     <meta name="description" content={description} />
     <title>{title}</title>
 
-    <!-- Friendly Modern Civic Typography: Red Hat Display + Figtree + JetBrains Mono -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Red+Hat+Display:wght@600;700;800;900&display=swap"
-      rel="stylesheet"
-    />
+    <!-- As duas fontes do primeiro ecrã (alfabeto latino) chegam logo com a página: sem troca de letra a meio. -->
+    <link rel="preload" href={figtreeLatin} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={redHatLatin} as="font" type="font/woff2" crossorigin />
     <Analytics />
+    <slot name="head" />
   </head>
   <body class="min-h-screen flex flex-col bg-background text-foreground selection:bg-primary/15 selection:text-primary">
     <Navbar currentPath={currentPath} />

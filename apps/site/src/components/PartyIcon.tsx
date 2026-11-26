@@ -22,5 +22,15 @@ export const PARTY_ICONS = new Set(Object.keys(PARTY_ICON));
 export function PartyIcon({ code }: { code: string }) {
   const src = PARTY_ICON[code];
   if (!src) return null;
-  return <img src={src} alt="" draggable={false} className="max-h-full max-w-full object-contain object-center" />;
+  // loading="lazy": o React deixa de os pré-carregar no início da página (competiam com o primeiro ecrã).
+  return (
+    <img
+      src={src}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      draggable={false}
+      className="max-h-full max-w-full object-contain object-center"
+    />
+  );
 }

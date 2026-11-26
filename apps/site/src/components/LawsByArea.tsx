@@ -82,12 +82,35 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 const STORAGE_KEY = "estadodalei_areas_v1";
-const DEFAULT_AREAS = ["trabalho", "habitacao", "saude"];
+/** Escolha de quem chega pela primeira vez (a página traz esta lista já do servidor). */
+export const DEFAULT_AREAS = ["trabalho", "habitacao", "saude"];
+const DEFAULT_TAB: TabId = "aprovadas";
 const PAGE_SIZE = 20;
+
+/** Os campos de cada lei que a lista mostra. */
+export type LawItem = Pick<
+  InitiativeSummaryDTO,
+  "id" | "title" | "plainTitle" | "areas" | "authorGroups" | "authorType" | "lastEvent" | "enteredAt" | "status" | "stage"
+>;
+
+export function toLawItem(s: LawItem): LawItem {
+  const { id, title, plainTitle, areas, authorGroups, authorType, lastEvent, enteredAt, status, stage } = s;
+  return { id, title, plainTitle, areas, authorGroups, authorType, lastEvent, enteredAt, status, stage };
+}
+
+/** Caminho na API (sem /api) das leis de uma escolha de áreas, separador e página. */
+export function lawsQuery(areas: string[], tabId: TabId = DEFAULT_TAB, pageNumber = 1): string {
+  const params = new URLSearchParams({ type: "leis", area: areas.join(","), pageSize: String(PAGE_SIZE), page: String(pageNumber) });
+  const status = TABS.find((t) => t.id === tabId)!.status;
+  if (status) params.set("status", status);
+  return `/initiatives?${params}`;
+}
+
+const sameAreas = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id));
 
 const shortCommittee = (name: string) => name.replace(/^Comissão (de|da|do|das|dos) /, "");
 
-function authorText(s: InitiativeSummaryDTO): string {
+function authorText(s: LawItem): string {
   if (s.authorGroups.length > 0) {
     const names = s.authorGroups.map((g) => partyMeta(g).name);
     return `${names.length > 1 ? "Autores" : "Autor"}: ${names.join(", ")}`;
@@ -96,7 +119,7 @@ function authorText(s: InitiativeSummaryDTO): string {
   return author ? `Autor: ${author}` : "";
 }
 
-function phaseText(s: InitiativeSummaryDTO): string {
+function phaseText(s: LawItem): string {
   if (s.lastEvent) {
     const date = formatDate(s.lastEvent.date);
     return `Última fase: ${s.lastEvent.phase}${date ? `, ${date}` : ""}`;
@@ -106,9 +129,14 @@ function phaseText(s: InitiativeSummaryDTO): string {
 
 interface LawsByAreaProps {
   data: AreasDTO;
+  /**
+   * Primeira página de DEFAULT_AREAS no separador inicial, com as contagens, já vinda do
+   * servidor: quem chega pela primeira vez vê a lista sem esperar nem saltos na página.
+   */
+  initial?: { items: LawItem[]; total: number; counts: ProposalOutcomeCounts | null } | null;
 }
 
-export function LawsByArea({ data }: LawsByAreaProps) {
+export function LawsByArea({ data, initial }: LawsByAreaProps) {
   const order = data.areas.map((a) => a.id);
   const labels = Object.fromEntries(data.areas.map((a) => [a.id, a.label]));
   const sortAreas = (ids: string[]) => order.filter((id) => ids.includes(id));
@@ -117,13 +145,15 @@ export function LawsByArea({ data }: LawsByAreaProps) {
   const [areasOpen, setAreasOpen] = useState(false);
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<TabId>("aprovadas");
-  const [counts, setCounts] = useState<ProposalOutcomeCounts | null>(null);
-  const [items, setItems] = useState<InitiativeSummaryDTO[]>([]);
-  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState<ProposalOutcomeCounts | null>(initial?.counts ?? null);
+  const [items, setItems] = useState<LawItem[]>(initial?.items ?? []);
+  const [total, setTotal] = useState(initial?.total ?? 0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initial);
   const [failed, setFailed] = useState(false);
   const request = useRef(0);
+  // A lista do servidor serve uma vez: à primeira, se a escolha for a de omissão.
+  const initialPending = useRef(Boolean(initial));
   const areasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -171,11 +201,8 @@ export function LawsByArea({ data }: LawsByAreaProps) {
       const id = ++request.current;
       setLoading(true);
       setFailed(false);
-      const params = new URLSearchParams({ type: "leis", area: areas.join(","), pageSize: String(PAGE_SIZE), page: String(pageNumber) });
-      const status = TABS.find((t) => t.id === tabId)!.status;
-      if (status) params.set("status", status);
       try {
-        const res = await fetch(`/api/initiatives?${params}`);
+        const res = await fetch(`/api${lawsQuery(areas, tabId, pageNumber)}`);
         if (!res.ok) throw new Error(String(res.status));
         const body = (await res.json()) as Paginated<InitiativeSummaryDTO>;
         if (id !== request.current) return; // já há um pedido mais recente
@@ -194,6 +221,10 @@ export function LawsByArea({ data }: LawsByAreaProps) {
   // Contagens da escolha (sem repetir leis que estão em duas áreas).
   useEffect(() => {
     if (!ready) return;
+    if (initial?.counts && sameAreas(selected, DEFAULT_AREAS)) {
+      setCounts(initial.counts);
+      return;
+    }
     setCounts(null);
     if (selected.length === 0) return;
     const controller = new AbortController();
@@ -206,6 +237,9 @@ export function LawsByArea({ data }: LawsByAreaProps) {
 
   useEffect(() => {
     if (!ready) return;
+    const useInitial = initialPending.current && tab === DEFAULT_TAB && sameAreas(selected, DEFAULT_AREAS);
+    initialPending.current = false;
+    if (useInitial) return;
     if (selected.length === 0) {
       request.current++;
       setItems([]);
@@ -229,7 +263,7 @@ export function LawsByArea({ data }: LawsByAreaProps) {
       <Card className="relative z-20 bg-card">
         <CardHeader className="border-b border-border/70 pb-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <CardTitle className="text-lg">1. Escolhe as áreas que te dizem respeito</CardTitle>
+            <CardTitle as="h2" className="text-lg">1. Escolhe as áreas que te dizem respeito</CardTitle>
             <div className="flex items-center gap-4 text-xs font-medium">
               {selected.length < order.length && (
                 <button type="button" onClick={() => choose(order)} className="cursor-pointer text-primary hover:underline">
@@ -332,7 +366,7 @@ export function LawsByArea({ data }: LawsByAreaProps) {
                   }`}
                 >
                   {t.label}
-                  {counts && <span className="ml-1.5 font-semibold tabular-nums opacity-75">{t.count(counts)}</span>}
+                  {counts && <span className={`ml-1.5 font-semibold tabular-nums ${tab === t.id ? "opacity-75" : ""}`}>{t.count(counts)}</span>}
                 </button>
               ))}
             </div>

@@ -590,13 +590,38 @@ export class HemicycleScene {
 
   private resize() {
     if (!this.host) return;
-    const w = this.host.clientWidth;
-    const h = this.host.clientHeight;
+    this.setCanvasSize(this.host.clientWidth, this.host.clientHeight);
+  }
+
+  /** Muda o tamanho do canvas só quando mudou (cada mudança volta a reservar a imagem no GPU). */
+  private setCanvasSize(w: number, h: number) {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
     if (!w || !h) return;
+    if (w === this.width && h === this.height && ratio === this.renderer.getPixelRatio()) return;
     this.width = w;
     this.height = h;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    if (ratio !== this.renderer.getPixelRatio()) this.renderer.setPixelRatio(ratio);
     this.renderer.setSize(w, h, false);
+  }
+
+  /**
+   * Adianta o trabalho do primeiro desenho sem bloquear a página (chamar antes de `attach`):
+   * o canvas fica já com o tamanho do contentor e os shaders são compilados em paralelo pelo
+   * browser, em vez de numa só tarefa longa ao mostrar o 3D.
+   */
+  async prepare(width: number, height: number) {
+    this.setCanvasSize(width, height);
+    // O programa dos lugares depende de haver uma cor por lugar: cria-a já (setSeats escreve-as).
+    if (!this.seatsMesh.instanceColor) this.seatsMesh.setColorAt(0, DIM_COLOR);
+    try {
+      await this.renderer.compileAsync(this.scene, this.camera);
+      // Um desenho de ensaio, noutra tarefa: compila os shaders das sombras (o compileAsync não
+      // os inclui) e reserva o mapa de sombras no GPU.
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      if (!this.host) this.renderer.render(this.scene, this.camera);
+    } catch {
+      // Sem compilação prévia, compila no primeiro desenho (como antes).
+    }
   }
 
   /** Câmara em órbita à volta do centro e enquadramento justo do hemiciclo, a cada imagem. */

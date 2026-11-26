@@ -97,7 +97,7 @@ function PartyLabel({ party, seats }: { party: string; seats: number }) {
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-extrabold text-[#0A1D56]">{party}</span>
-        <span className="block truncate text-[11px] font-semibold text-[#7A89AD]">
+        <span className="block truncate text-[11px] font-semibold text-[#5B6A90]">
           {seats === 1 ? "1 deputado" : `${seats} deputados`}
         </span>
       </span>
@@ -161,7 +161,7 @@ function Row({
           {shown.map((s, i) => (
             <span key={s.key}>
               {i > 0 ? " · " : ""}
-              <strong className="font-extrabold" style={{ color: s.value > 0 ? s.ink : "#7A89AD" }}>
+              <strong className="font-extrabold" style={{ color: s.value > 0 ? s.ink : "#5B6A90" }}>
                 {s.value}
               </strong>{" "}
               {s.words}
@@ -279,7 +279,7 @@ function MonthChart({
           style={baseline >= 100 ? { bottom: 0 } : { top: `${baseline}%` }}
         />
       </div>
-      <div aria-hidden className="relative mt-1.5 h-4 text-[10px] font-semibold text-[#7A89AD]">
+      <div aria-hidden className="relative mt-1.5 h-4 text-[10px] font-semibold text-[#5B6A90]">
         {ticks.map((i) => (
           <span key={i} className="absolute whitespace-nowrap" style={place(i)}>
             {monthShort(months[i]!)}
@@ -384,7 +384,7 @@ function MonthlyTable({
       <summary className="cursor-pointer text-sm font-bold text-[#135BFF]">Ver os números em tabela</summary>
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[44rem] border-collapse text-left text-xs tabular-nums">
-          <caption className="mb-2 text-left text-[11px] font-semibold text-[#7A89AD]">{caption}</caption>
+          <caption className="mb-2 text-left text-[11px] font-semibold text-[#5B6A90]">{caption}</caption>
           <thead>
             <tr>
               <th scope="col" className="py-1.5 pr-3 font-extrabold text-[#0A1D56]">
@@ -499,7 +499,7 @@ function VotesMonthly({ record, parties }: { record: PartyRecordDTO; parties: Pa
             summary={
               <>
                 <strong className="font-extrabold text-[#047857]">{pct(p.votes.favor, p.votes.total)}%</strong> a favor
-                <span className="block font-medium text-[#7A89AD]">{p.votes.total} votações</span>
+                <span className="block font-medium text-[#5B6A90]">{p.votes.total} votações</span>
               </>
             }
           >
@@ -638,7 +638,7 @@ export function PartyRecord({ record }: { record: PartyRecordDTO }) {
                     aside={
                       <>
                         <span className="block text-lg font-extrabold leading-none">{p.proposed.total}</span>
-                        <span className="text-[11px] font-semibold text-[#7A89AD]">
+                        <span className="text-[11px] font-semibold text-[#5B6A90]">
                           {p.proposed.total === 1 ? "lei proposta" : "leis propostas"}
                         </span>
                       </>
@@ -649,7 +649,7 @@ export function PartyRecord({ record }: { record: PartyRecordDTO }) {
 
               {record.others.length > 0 ? (
                 <>
-                  <h3 className="mt-6 text-xs font-extrabold tracking-wide text-[#7A89AD] uppercase">Outros autores</h3>
+                  <h3 className="mt-6 text-xs font-extrabold tracking-wide text-[#5B6A90] uppercase">Outros autores</h3>
                   <ul className="mt-1 divide-y divide-[#EEF3FE]">
                     {record.others.map((o) => (
                       <Row
@@ -661,7 +661,7 @@ export function PartyRecord({ record }: { record: PartyRecordDTO }) {
                         aside={
                           <>
                             <span className="block text-lg font-extrabold leading-none">{o.proposed.total}</span>
-                            <span className="text-[11px] font-semibold text-[#7A89AD]">
+                            <span className="text-[11px] font-semibold text-[#5B6A90]">
                               {o.proposed.total === 1 ? "lei proposta" : "leis propostas"}
                             </span>
                           </>
@@ -686,7 +686,7 @@ export function PartyRecord({ record }: { record: PartyRecordDTO }) {
                     aside={
                       <>
                         <span className="block text-lg font-extrabold leading-none">{pct(p.votes.favor, p.votes.total)}%</span>
-                        <span className="text-[11px] font-semibold text-[#7A89AD]">a favor</span>
+                        <span className="text-[11px] font-semibold text-[#5B6A90]">a favor</span>
                       </>
                     }
                   />
@@ -696,7 +696,7 @@ export function PartyRecord({ record }: { record: PartyRecordDTO }) {
           )}
         </div>
 
-        <p className="mt-4 max-w-3xl text-xs leading-relaxed text-[#7A89AD]">
+        <p className="mt-4 max-w-3xl text-xs leading-relaxed text-[#5B6A90]">
           {monthly && tab === "propostas" ? (
             <>
               Cada lei conta no mês em que foi decidida: a votação final global, nas aprovadas, ou a votação que a

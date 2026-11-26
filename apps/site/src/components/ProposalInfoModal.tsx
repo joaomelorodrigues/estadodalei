@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type React from "react";
-import type { LegislativeProposal } from "@/data/types";
+import type { HeroProposal } from "@/data/types";
 import { X } from "lucide-react";
 
 interface ProposalInfoModalProps {
-  proposal: LegislativeProposal;
+  proposal: HeroProposal;
   onClose: () => void;
 }
 

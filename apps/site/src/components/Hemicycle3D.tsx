@@ -219,17 +219,29 @@ export function Hemicycle3D({
   const latest = useRef({ seats, spots, openKey, focusParty, onFocusParty, onHoverParty });
   latest.current = { seats, spots, openKey, focusParty, onFocusParty, onHoverParty };
 
-  // three.js só se carrega depois de a página estar pronta.
+  // three.js só se carrega depois de a página estar pronta. O arranque vai em passos, cada um
+  // numa tarefa curta (a página responde entre eles): carregar o módulo, criar o contexto WebGL,
+  // compilar os shaders em paralelo e só então mostrar o 3D, que já desenha sem demoras.
   useEffect(() => {
     if (mod) return;
     let alive = true;
-    const load = () =>
-      import("@/lib/hemicycleScene")
-        .then((m) => {
-          sceneModule = m;
-          if (alive) setMod(m);
-        })
-        .catch(() => {});
+    const nextTask = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+    const load = async () => {
+      try {
+        const m = await import("@/lib/hemicycleScene");
+        await nextTask();
+        if (!alive) return;
+        const scene = m.getHemicycleScene();
+        await nextTask();
+        const host = canvasHostRef.current;
+        if (alive && scene && host) await scene.prepare(host.clientWidth, host.clientHeight);
+        await nextTask();
+        sceneModule = m;
+        if (alive) setMod(m);
+      } catch {
+        // Sem 3D: fica o desenho em SVG.
+      }
+    };
     const idle = window.requestIdleCallback?.(load, { timeout: 1500 });
     const timer = idle == null ? window.setTimeout(load, 200) : undefined;
     return () => {
@@ -431,15 +443,11 @@ export function Hemicycle3D({
 
   const openSpot = spots.find((spot) => spot.key === openKey);
 
-  return (
-    <div className="hemicycle relative mx-auto">
-      <svg
-        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
-        className={`block h-auto w-full select-none transition-opacity duration-500 ${ready ? "opacity-0" : ""}`}
-        role="img"
-        aria-label={ariaLabel}
-        aria-hidden={ready || undefined}
-      >
+  // O desenho em SVG só muda com a lei ou o partido destacado: com o 3D a aparecer (e outros
+  // estados), o React não volta a percorrer os 230 lugares.
+  const drawing = useMemo(
+    () => (
+      <>
         <defs>
           {(Object.keys(PALETTE) as SeatState[]).map((state) => (
             <radialGradient key={state} id={`${id}-${state}`} cx="35%" cy="30%" r="75%">
@@ -511,6 +519,21 @@ export function Hemicycle3D({
             </g>
           );
         })}
+      </>
+    ),
+    [id, runs, first, last, ordered, focusParty, hoverParty],
+  );
+
+  return (
+    <div className="hemicycle relative mx-auto">
+      <svg
+        viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+        className={`block h-auto w-full select-none transition-opacity duration-500 ${ready ? "opacity-0" : ""}`}
+        role="img"
+        aria-label={ariaLabel}
+        aria-hidden={ready || undefined}
+      >
+        {drawing}
       </svg>
 
       {/* Hemiciclo 3D (a vista muda a cada lei); um ponto por partido e sentido de voto */}

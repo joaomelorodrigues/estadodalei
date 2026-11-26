@@ -15,6 +15,11 @@ export default defineConfig({
   integrations: [react()],
   vite: {
     plugins: [tailwindcss()],
+    build: {
+      // Fontes sempre em ficheiro próprio (em cache), nunca embutidas na CSS como data:
+      // (a CSP só aceita fontes do próprio site, e o Chrome carrega logo as embutidas).
+      assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined),
+    },
     server: {
       // Em desenvolvimento, os pedidos do browser a /api vão para a API.
       proxy: { "/api": API_URL },

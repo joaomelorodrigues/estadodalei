@@ -112,7 +112,7 @@ export function PersonalImpactSimulator({ proposals }: PersonalImpactSimulatorPr
         <CardHeader className="border-b border-border/70 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-lg">1. Seleciona tudo o que se aplica a ti</CardTitle>
+              <CardTitle as="h2" className="text-lg">1. Seleciona tudo o que se aplica a ti</CardTitle>
               <CardDescription className="text-xs mt-0.5">
                 100% anónimo e guardado apenas no teu navegador — sem registo nem recolha de dados.
               </CardDescription>

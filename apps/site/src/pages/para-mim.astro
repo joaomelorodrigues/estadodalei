@@ -1,6 +1,6 @@
 ---
 import MainLayout from "@/layouts/MainLayout.astro";
-import { LawsByArea } from "@/components/LawsByArea";
+import { DEFAULT_AREAS, LawsByArea, lawsQuery, toLawItem, type LawItem } from "@/components/LawsByArea";
 import { PersonalImpactSimulator } from "@/components/PersonalImpactSimulator";
 import type { AreasDTO, InitiativeSummaryDTO, Paginated } from "@estadodalei/shared";
 import ApiUnavailable from "@/components/ApiUnavailable.astro";
@@ -8,15 +8,20 @@ import { api } from "@/lib/api";
 import { toProposal } from "@/lib/adapt";
 
 let areas: AreasDTO | null = null;
+let initialLaws: { items: LawItem[]; total: number; counts: AreasDTO["selection"] } | null = null;
 let proposals: ReturnType<typeof toProposal>[] = [];
 try {
-  // Leis por área (comissão competente indicada pela AR) e, quando existirem,
+  // Leis por área (comissão competente indicada pela AR), com as contagens e a primeira
+  // página da escolha por omissão (a lista aparece logo, sem saltos), e, quando existirem,
   // as explicações revistas que dizem quem é afetado.
-  const [areaData, page] = await Promise.all([
-    api<AreasDTO>("/areas"),
+  const [areaData, laws, page] = await Promise.all([
+    api<AreasDTO>(`/areas?select=${DEFAULT_AREAS.join(",")}`),
+    // Sem esta lista, o browser pede-a depois (como para quem guardou outra escolha).
+    api<Paginated<InitiativeSummaryDTO>>(lawsQuery(DEFAULT_AREAS)).catch(() => null),
     api<Paginated<InitiativeSummaryDTO>>("/initiatives?explained=true&pageSize=50"),
   ]);
   areas = areaData;
+  if (laws) initialLaws = { items: laws.items.map(toLawItem), total: laws.total, counts: areaData.selection };
   proposals = page.items.map((s) => toProposal(s));
 } catch (err) {
   console.error("[para-mim] API indisponível:", err);
@@ -35,13 +40,13 @@ Astro.response.headers.set("Cache-Control", "public, max-age=60");
   <section class="bg-[#135BFF] text-white">
     <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
       <div class="max-w-3xl space-y-2.5">
-        <span class="text-xs font-bold uppercase tracking-wider text-blue-100">
+        <span class="text-xs font-bold uppercase tracking-wider text-blue-50">
           Ferramenta para o Cidadão
         </span>
         <h1 class="font-editorial text-3xl sm:text-4xl font-extrabold text-white">
           O que é que estas leis mudam para mim?
         </h1>
-        <p class="text-sm sm:text-base text-blue-100 leading-relaxed font-medium">
+        <p class="text-sm sm:text-base text-blue-50 leading-relaxed font-medium">
           Não precisas de ler dezenas de documentos oficiais. Escolhe as áreas da tua vida (trabalho, casa, saúde, escola…) e mostramos as leis que a Assembleia da República aprovou, está a discutir ou chumbou em cada uma.
         </p>
       </div>
@@ -49,7 +54,7 @@ Astro.response.headers.set("Cache-Control", "public, max-age=60");
   </section>
 
   <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
-    {areas ? <LawsByArea client:load data={areas} /> : <ApiUnavailable />}
+    {areas ? <LawsByArea client:load data={areas} initial={initialLaws} /> : <ApiUnavailable />}
     {hasExplanations && <PersonalImpactSimulator client:visible proposals={proposals} />}
   </div>
 </MainLayout>

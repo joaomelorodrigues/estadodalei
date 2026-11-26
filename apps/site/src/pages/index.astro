@@ -5,7 +5,7 @@ import ApiUnavailable from "@/components/ApiUnavailable.astro";
 import { ParliamentHero } from "@/components/ParliamentHero";
 import { PartyRecord } from "@/components/PartyRecord";
 import { api } from "@/lib/api";
-import { toProposal } from "@/lib/adapt";
+import { toHeroProposal, toProposal } from "@/lib/adapt";
 
 let data: Awaited<ReturnType<typeof load>> | null = null;
 
@@ -20,7 +20,7 @@ async function load() {
     api<HighlightsDTO>("/highlights?limit=8"),
     api<CompositionDTO>("/composition"),
   ]);
-  const toList = (list: HighlightsDTO["pending"]) => list.map((h) => toProposal(h.initiative, h.keyVote));
+  const toList = (list: HighlightsDTO["pending"]) => list.map((h) => toHeroProposal(toProposal(h.initiative, h.keyVote)));
   return {
     highlights,
     composition,
@@ -45,6 +45,14 @@ Astro.response.headers.set("Cache-Control", "public, max-age=60");
   currentPath="/"
   tightFooter
 >
+  {
+    /*
+      O título do hero é o maior elemento do primeiro ecrã. O browser só pinta depois de ler
+      esse bloco do HTML (chega no mesmo instante): sem isto, às vezes pintava primeiro só o
+      cabeçalho e o título aparecia uma fração de segundo depois.
+    */
+    data && <link slot="head" rel="expect" href="#hero-titulo" blocking="render" />
+  }
   {
     data ? (
       <ParliamentHero

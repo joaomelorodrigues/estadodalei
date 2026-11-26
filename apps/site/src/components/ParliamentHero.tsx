@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
-import type { VoteDTO } from "@estadodalei/shared";
-import type { LegislativeProposal, VoteRecord } from "@/data/types";
+import type { HeroProposal, VoteSides } from "@/data/types";
 import { buildSeats, countStates, type Seat, type SeatState } from "@/lib/hemicycle";
 import { partyVotes } from "@/lib/adapt";
 import { formatDate } from "@/lib/format";
@@ -23,9 +22,9 @@ function TitleAuthor({ author }: { author: string }) {
 }
 
 interface ParliamentHeroProps {
-  pending: LegislativeProposal[];
-  approved: LegislativeProposal[];
-  rejected: LegislativeProposal[];
+  pending: HeroProposal[];
+  approved: HeroProposal[];
+  rejected: HeroProposal[];
   /** Totais oficiais de cada grupo (as listas trazem só as mais recentes). */
   counts: { pending: number; approved: number; rejected: number };
   /** Lugares atuais por grupo parlamentar. */
@@ -55,7 +54,7 @@ const ROW_ORDER: SeatState[] = ["favor", "abstencao", "contra", "ausente", "sem-
  * Partidos agrupados por sentido de voto, a partir dos mesmos lugares do hemiciclo.
  * Um grupo dividido aparece em mais de uma linha (ex.: PS 56 em Abstenção, PS 2 em Contra).
  */
-function buildVoteRows(seats: Seat[], composition: Record<string, number>, vote: VoteDTO | null): VoteRow[] {
+function buildVoteRows(seats: Seat[], composition: Record<string, number>, vote: VoteSides | null): VoteRow[] {
   if (!vote) return [];
 
   const byState = new Map<SeatState, Map<string, number>>();
@@ -110,7 +109,7 @@ function buildVoteRows(seats: Seat[], composition: Record<string, number>, vote:
 }
 
 /** "Votação na generalidade · aprovada · 14/11/2026" */
-function voteCaption(votes: VoteRecord | undefined): string {
+function voteCaption(votes: HeroProposal["votes"]): string {
   if (!votes) return "Ainda sem votação em Plenário";
   const result = `${votes.result.toLowerCase()}${votes.unanimous ? " por unanimidade" : ""}`;
   return [votes.phase, result, formatDate(votes.date)].filter(Boolean).join(" · ");
@@ -200,7 +199,7 @@ const TitleInfo: React.FC<TitleInfoProps> = (props) => {
   );
 };
 
-function centerInfo(proposal: LegislativeProposal, mode: HeroMode) {
+function centerInfo(proposal: HeroProposal, mode: HeroMode) {
   if (mode === "pending") {
     return { centerTitle: proposal.statusStep >= 5 ? "Votação final" : "Na especialidade" };
   }
@@ -226,7 +225,7 @@ export function ParliamentHero({
   const activeList =
     mode === "pending" ? pendingList : mode === "approved" ? approvedList : rejectedList;
 
-  const activeProposal: LegislativeProposal | undefined =
+  const activeProposal: HeroProposal | undefined =
     activeList.find((p) => p.slug === selectedSlug) ?? activeList[0];
 
   function switchMode(next: HeroMode) {
@@ -376,7 +375,7 @@ export function ParliamentHero({
                     onClick={() => switchMode("approved")}
                     className={`cursor-pointer rounded-full px-2 py-2 text-center text-[11px] leading-tight font-bold transition-colors sm:px-4 sm:py-2 sm:text-sm ${
                       mode === "approved"
-                        ? "bg-[#059669] text-white"
+                        ? "bg-[#047857] text-white"
                         : "bg-[#F1F5FF] text-[#4C5D85] hover:text-[#0A1D56]"
                     }`}
                   >
@@ -409,7 +408,7 @@ export function ParliamentHero({
                 </p>
               ) : (
               <>
-              <div className="relative grid shrink-0 bg-white px-4 pt-4 pb-1 sm:px-6 sm:pt-5 short:pt-3">
+              <div id="hero-titulo" className="relative grid shrink-0 bg-white px-4 pt-4 pb-1 sm:px-6 sm:pt-5 short:pt-3">
                 <p
                   ref={titleMeasureRef}
                   aria-hidden
@@ -434,15 +433,19 @@ export function ParliamentHero({
                     </h1>
                   );
                 })}
-                {titleClamped || titleOpen ? (
-                  <button
-                    type="button"
-                    onClick={() => setTitleOpen((open) => !open)}
-                    className="col-start-1 row-start-2 mt-1 max-sm:shorter:mt-0 cursor-pointer justify-self-start text-sm font-bold text-[#135BFF] hover:underline"
-                  >
-                    {titleOpen ? "ver menos" : "ver mais"}
-                  </button>
-                ) : null}
+                {/*
+                  A linha do botão existe sempre (invisível quando o título cabe): o título só se
+                  mede no browser, e o botão a aparecer depois empurrava o resto da página.
+                */}
+                <button
+                  type="button"
+                  onClick={() => setTitleOpen((open) => !open)}
+                  className={`col-start-1 row-start-2 mt-1 max-sm:shorter:mt-0 cursor-pointer justify-self-start text-sm font-bold text-[#135BFF] hover:underline ${
+                    titleClamped || titleOpen ? "" : "invisible"
+                  }`}
+                >
+                  {titleOpen ? "ver menos" : "ver mais"}
+                </button>
               </div>
 
               <div
@@ -523,20 +526,25 @@ export function ParliamentHero({
                 </div>
 
                 {canSlide ? (
-                  <div className="mt-4 flex shrink-0 items-center justify-center gap-1.5 short:mt-2">
+                  <div className="mt-1 flex shrink-0 items-center justify-center short:mt-0">
                     {activeList.map((item, index) => (
+                      // Área de toque com 24 px (mínimo recomendado); o ponto visível fica por dentro.
                       <button
                         key={item.slug}
                         type="button"
                         aria-label={item.plainTitle}
                         aria-current={index === activeIndex ? "true" : undefined}
                         onClick={() => showProposal(index, index > activeIndex ? 1 : -1)}
-                        className={`h-1.5 cursor-pointer rounded-full transition-all ${
-                          index === activeIndex
-                            ? "w-5 bg-[#135BFF]"
-                            : "w-1.5 bg-[#D0D9EE] hover:bg-[#4C5D85]"
-                        }`}
-                      />
+                        className="group flex h-6 cursor-pointer items-center justify-center px-[9px]"
+                      >
+                        <span
+                          className={`block h-1.5 rounded-full transition-all ${
+                            index === activeIndex
+                              ? "w-5 bg-[#135BFF]"
+                              : "w-1.5 bg-[#D0D9EE] group-hover:bg-[#4C5D85]"
+                          }`}
+                        />
+                      </button>
                     ))}
                   </div>
                 ) : null}
