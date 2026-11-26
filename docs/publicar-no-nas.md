@@ -17,6 +17,8 @@ O script [scripts/deploy-portainer.sh](../scripts/deploy-portainer.sh) lê o fic
 PORTAINER_URL=https://<ip-do-nas>:<porta>   # obrigatório
 HEARTBEAT_URL=https://hc-ping.com/<uuid>    # opcional: alerta por email se os dados ficarem desatualizados
 ADMIN_TOKEN=<token longo>                   # opcional: ativa POST /api/admin/sync
+POSTHOG_KEY=phc_...                         # opcional: estatísticas de visitas, sem cookies
+POSTHOG_HOST=https://eu.i.posthog.com       # opcional: por omissão, a PostHog na UE
 ```
 
 O token do Portainer vem de `$PORTAINER_TOKEN` ou do ficheiro `~/.portainer-token` (Portainer → My account → Access tokens).
@@ -27,7 +29,7 @@ O token do Portainer vem de `$PORTAINER_TOKEN` ou do ficheiro `~/.portainer-toke
 - na primeira vez cria a stack, com o MongoDB 4.4 e o volume `estadodalei_mongo-data`. O CPU do DS918+ não tem AVX, e o MongoDB 5+ não arranca sem AVX;
 - nas vezes seguintes atualiza a stack, e só a app é recriada (o MongoDB e os dados mantêm-se);
 - publica o site na porta 20003 do NAS e o MongoDB em `127.0.0.1:27018` (variáveis da stack `SITE_PORT`, `SITE_BIND`, `MONGO_IMAGE`, `MONGO_PORT`);
-- guarda `HEARTBEAT_URL` e `ADMIN_TOKEN` como variáveis da stack.
+- guarda `HEARTBEAT_URL`, `ADMIN_TOKEN`, `POSTHOG_KEY` e `POSTHOG_HOST` como variáveis da stack.
 
 O primeiro deploy demora vários minutos, porque o NAS instala as dependências e compila. Com a base de dados vazia, a primeira sincronização começa logo a seguir.
 

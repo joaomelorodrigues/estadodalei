@@ -36,6 +36,17 @@ const schema = z.object({
   SYNC_PROVIDER: z.enum(["auto", "ar", "opendata"]).default("auto"),
   ADMIN_TOKEN: z.string().optional().default(""),
   SYNC_USER_AGENT: z.string().default("Mozilla/5.0 (compatible; civic-open-data-sync/1.0)"),
+  /**
+   * Estatísticas de visitas (PostHog, sem cookies). Vazio = desligado: cópias do código
+   * não enviam dados para a conta do projeto. Lido também pelo site (Analytics.astro).
+   */
+  POSTHOG_KEY: z.string().trim().optional().default(""),
+  POSTHOG_HOST: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => v || "https://eu.i.posthog.com")
+    .pipe(z.string().url()),
   /** Pasta do build do site Astro (por omissão ../site/dist). */
   SITE_DIST: z.string().optional(),
 });

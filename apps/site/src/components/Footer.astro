@@ -13,6 +13,10 @@ const year = new Date().getFullYear();
 // Repositório público do código (licença AGPL-3.0: o site tem de indicar onde está o código).
 const SOURCE_URL = "https://github.com/joaomelorodrigues/estadodalei";
 
+// Estatísticas de visitas ligadas (ver Analytics.astro): diz-se a quem visita.
+const analytics = !!process.env.POSTHOG_KEY?.trim();
+const analyticsInEU = (process.env.POSTHOG_HOST?.trim() || "https://eu.i.posthog.com").includes("://eu.");
+
 // Quando foram sincronizados os dados oficiais (mostrado a todos, para transparência).
 let status: StatusDTO | null = null;
 try {
@@ -75,6 +79,11 @@ function describe(iso: string): string {
         <p class="text-xs leading-relaxed text-muted-foreground/85">
           As explicações em linguagem simples não substituem a consulta do texto legal oficial publicado no Diário da República.
         </p>
+        {analytics && (
+          <p class="text-xs leading-relaxed text-muted-foreground/85">
+            Contamos as visitas de forma anónima, sem cookies (PostHog{analyticsInEU ? ", com servidores na União Europeia" : ""}).
+          </p>
+        )}
       </div>
 
       <div class="md:col-span-3 space-y-2.5">

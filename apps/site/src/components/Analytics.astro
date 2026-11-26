@@ -1,0 +1,34 @@
+---
+/**
+ * Estatísticas de visitas com a PostHog, sem cookies nem armazenamento no browser
+ * (cookieless_mode: o visitante é identificado por um hash calculado nos servidores
+ * da PostHog). Por isso o site não precisa de aviso de cookies.
+ *
+ * Só liga com POSTHOG_KEY definido no servidor (variável de ambiente, lida em cada
+ * pedido): em desenvolvimento e em cópias do código não é enviado nada.
+ * No projeto da PostHog, o modo sem cookies tem de estar ativo nas definições,
+ * senão as visitas são ignoradas.
+ */
+const key = process.env.POSTHOG_KEY?.trim();
+const host = process.env.POSTHOG_HOST?.trim() || "https://eu.i.posthog.com";
+---
+
+{key && <meta name="posthog" data-key={key} data-host={host} />}
+
+<script>
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="posthog"]');
+  const key = meta?.dataset.key;
+  if (key) {
+    import("posthog-js").then(({ default: posthog }) => {
+      posthog.init(key, {
+        api_host: meta.dataset.host,
+        defaults: "2026-08-30",
+        cookieless_mode: "always",
+        // Só visitas e cliques: nada de gravação de sessões, inquéritos nem scripts externos.
+        disable_session_recording: true,
+        disable_surveys: true,
+        disable_external_dependency_loading: true,
+      });
+    });
+  }
+</script>

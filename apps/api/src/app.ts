@@ -31,6 +31,13 @@ export async function createApp() {
     next();
   });
 
+  // PostHog (se ativa): o browser envia as visitas para o servidor de ingestão e para o de
+  // recursos (ex.: eu.i.posthog.com e eu-assets.i.posthog.com).
+  const posthogHost = config.POSTHOG_KEY ? new URL(config.POSTHOG_HOST).origin : null;
+  const posthogOrigins = posthogHost
+    ? [...new Set([posthogHost, posthogHost.replace(/:\/\/(eu|us)\.i\./, "://$1-assets.i.")])]
+    : [];
+
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -44,7 +51,7 @@ export async function createApp() {
           "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           "font-src": ["'self'", "https://fonts.gstatic.com"],
           "img-src": ["'self'", "data:"],
-          "connect-src": ["'self'"],
+          "connect-src": ["'self'", ...posthogOrigins],
         },
       },
     }),

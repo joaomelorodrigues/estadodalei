@@ -145,7 +145,8 @@ export function PersonalImpactSimulator({ proposals }: PersonalImpactSimulatorPr
         </CardHeader>
 
         <CardContent className="pt-5 space-y-4">
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          {/* ph-no-capture: as estatísticas de visitas não registam o perfil escolhido. */}
+          <div className="ph-no-capture grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
             {CITIZEN_GROUPS.map((group) => {
               const isSelected = selected.includes(group.id);
               return (

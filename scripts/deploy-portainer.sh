@@ -22,6 +22,8 @@
 # Os segredos ficam guardados como variáveis da stack no Portainer:
 #   HEARTBEAT_URL=https://hc-ping.com/<uuid>   alerta por email se os dados ficarem desatualizados
 #   ADMIN_TOKEN=<token longo>                  ativa POST /api/admin/sync
+#   POSTHOG_KEY=phc_...                        estatísticas de visitas (PostHog, sem cookies)
+#   POSTHOG_HOST=https://eu.i.posthog.com      (por omissão, a PostHog na UE)
 #
 # Os sites no NAS usam as portas 20000-20099, uma por site. O público chega pelo
 # proxy inverso do DSM (domínio:443 -> localhost:HOST_PORT). As regras de 80 e 443
@@ -44,7 +46,7 @@ MONGO_PORT="${MONGO_PORT:-27018}"      # a mesma porta que no Mac
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-# Definições locais e segredos (fora do git): PORTAINER_URL, HEARTBEAT_URL, ADMIN_TOKEN.
+# Definições locais e segredos (fora do git): PORTAINER_URL, HEARTBEAT_URL, ADMIN_TOKEN, POSTHOG_KEY.
 if [[ -f .env.production ]]; then
   set -a; source .env.production; set +a
 fi
@@ -117,6 +119,7 @@ if [[ "${CHECK_ONLY:-}" == "1" ]]; then
   echo "✓ Verificação OK: Portainer acessível (ambiente ${PORTAINER_ENDPOINT_ID}), portas ${HOST_PORT} (site) e ${MONGO_PORT} (MongoDB) livres."
   echo "  Stack ${STACK}: $([[ -n "$STACK_ID" ]] && echo "existe (id ${STACK_ID}), vai ser atualizada" || echo 'ainda não existe, vai ser criada')"
   echo "  HEARTBEAT_URL $([[ -n "${HEARTBEAT_URL:-}" ]] && echo definido || echo 'não definido (sem alertas por email)')"
+  echo "  POSTHOG_KEY $([[ -n "${POSTHOG_KEY:-}" ]] && echo "definido (${POSTHOG_HOST:-https://eu.i.posthog.com})" || echo 'não definido (sem estatísticas de visitas)')"
   exit 0
 fi
 
@@ -143,13 +146,16 @@ IMAGE_ID="$(api "${DOCKER}/images/${IMAGE}/json" | jq -r '.Id')"
 # Variáveis da stack (interpoladas no docker-compose.yml pelo Portainer).
 STACK_ENV="$(jq -n \
   --arg mongo "$MONGO_IMAGE" --arg mongoport "$MONGO_PORT" --arg port "$HOST_PORT" \
-  --arg heartbeat "${HEARTBEAT_URL:-}" --arg admin "${ADMIN_TOKEN:-}" '[
+  --arg heartbeat "${HEARTBEAT_URL:-}" --arg admin "${ADMIN_TOKEN:-}" \
+  --arg phkey "${POSTHOG_KEY:-}" --arg phhost "${POSTHOG_HOST:-https://eu.i.posthog.com}" '[
   {name: "MONGO_IMAGE", value: $mongo},
   {name: "MONGO_PORT", value: $mongoport},
   {name: "SITE_PORT", value: $port},
   {name: "SITE_BIND", value: "0.0.0.0"},
   {name: "HEARTBEAT_URL", value: $heartbeat},
-  {name: "ADMIN_TOKEN", value: $admin}
+  {name: "ADMIN_TOKEN", value: $admin},
+  {name: "POSTHOG_KEY", value: $phkey},
+  {name: "POSTHOG_HOST", value: $phhost}
 ]')"
 
 stack_request() { # método, URL; corpo JSON no stdin

@@ -120,6 +120,8 @@ Depois de arrancar, o site atualiza-se sozinho:
 | Eleições / nova legislatura | Com `LEGISLATURE=auto`, deteta a nova pasta da AR e muda sozinho |
 | Reinício da máquina | Os dois serviços voltam a arrancar (`restart: unless-stopped`) |
 
+**Estatísticas de visitas (opcional):** com `POSTHOG_KEY` definido, o site conta as visitas com a [PostHog](https://posthog.com), sem cookies nem armazenamento no browser (`cookieless_mode`), por isso não precisa de aviso de cookies. O rodapé passa a dizê-lo a quem visita. Sem a chave, nada é enviado. No projeto da PostHog é preciso ativar o modo sem cookies nas definições, senão as visitas são ignoradas. Os robôs e browsers automáticos não contam.
+
 Para confirmar a qualquer momento: `GET /api/status` (503 se alguma fonte estiver atrasada) ou o rodapé do site ("Dados oficiais atualizados hoje às …"). Com `HEARTBEAT_URL` definido (por exemplo, um check gratuito do [healthchecks.io](https://healthchecks.io)), chega um email quando os dados ficam atrasados ou o servidor deixa de responder.
 
 Limite conhecido: o feed do Diário da República só tem os atos do próprio dia. Se o servidor estiver desligado um dia inteiro, a lista de atos desse dia (portarias, decretos-lei) perde-se. As leis da AR continuam a aparecer como publicadas, porque isso vem dos dados da AR.
