@@ -54,7 +54,6 @@ Astro.response.headers.set("Cache-Control", "public, max-age=60");
         rejected={data.rejected}
         counts={data.highlights.counts}
         composition={data.composition.seats}
-        totalSeats={data.composition.total || 230}
       />
     ) : (
       <ApiUnavailable />

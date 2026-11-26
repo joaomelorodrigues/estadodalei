@@ -30,7 +30,6 @@ interface ParliamentHeroProps {
   counts: { pending: number; approved: number; rejected: number };
   /** Lugares atuais por grupo parlamentar. */
   composition: Record<string, number>;
-  totalSeats: number;
 }
 
 type HeroMode = "pending" | "approved" | "rejected";
@@ -215,7 +214,6 @@ export function ParliamentHero({
   rejected: rejectedList,
   counts,
   composition,
-  totalSeats,
 }: ParliamentHeroProps) {
   const initialMode: HeroMode = pendingList.length ? "pending" : approvedList.length ? "approved" : "rejected";
   const [mode, setMode] = useState<HeroMode>(initialMode);
@@ -403,10 +401,6 @@ export function ParliamentHero({
                     <span className="hidden sm:inline">Chumbadas ({counts.rejected})</span>
                   </button>
                 </div>
-
-                <span className="hidden sm:inline text-xs font-semibold text-[#4C5D85]">
-                  {totalSeats} deputados
-                </span>
               </div>
 
               {!activeProposal ? (
