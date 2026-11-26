@@ -208,6 +208,8 @@ export interface InitiativeSummaryDTO {
   plainTitle: string | null;
   /** Explicação revista, quando existe. */
   explanation: ExplanationDTO | null;
+  /** Áreas (ids de LAW_AREAS) pela comissão competente; só nas listas filtradas por área. */
+  areas?: string[];
 }
 
 export interface InitiativeDetailDTO extends InitiativeSummaryDTO {
@@ -366,6 +368,60 @@ export interface MetaDTO {
   lastRuns: SyncRunDTO[];
   lastSuccess: Partial<Record<SyncJob, SyncRunDTO>>;
   counts: { initiatives: number; diplomas: number; dreActs: number };
+}
+
+// ---------------------------------------------------------------------------
+// Áreas ("O que muda para mim"): a comissão parlamentar competente de cada lei
+// ---------------------------------------------------------------------------
+
+/**
+ * Área do dia a dia, definida pela comissão parlamentar que a AR indica como competente
+ * para a lei. O padrão procura no nome da comissão, para continuar a funcionar quando
+ * as comissões mudam de nome numa nova legislatura.
+ */
+export interface LawArea {
+  id: string;
+  label: string;
+  committee: RegExp;
+}
+
+// Atenção a nomes contidos noutros: "Agricultura" contém "cultura", daí o \b.
+export const LAW_AREAS: LawArea[] = [
+  { id: "trabalho", label: "Trabalho e Segurança Social", committee: /trabalho|seguran[çc]a social/i },
+  { id: "impostos", label: "Impostos e Orçamento", committee: /or[çc]amento|finan[çc]as/i },
+  { id: "habitacao", label: "Habitação e transportes", committee: /habita[çc][ãa]o|infraestruturas|mobilidade|obras p[úu]blicas/i },
+  { id: "saude", label: "Saúde", committee: /sa[úu]de/i },
+  { id: "educacao", label: "Educação e ciência", committee: /educa[çc][ãa]o|ci[êe]ncia/i },
+  { id: "direitos", label: "Direitos e justiça", committee: /assuntos constitucionais|direitos, liberdades/i },
+  { id: "ambiente", label: "Ambiente e energia", committee: /ambiente|energia/i },
+  { id: "economia", label: "Economia", committee: /economia/i },
+  { id: "agricultura", label: "Agricultura e pescas", committee: /agricultura|pescas/i },
+  { id: "cultura", label: "Cultura, juventude e desporto", committee: /\bcultura|juventude|desporto/i },
+  { id: "estado", label: "Estado e autarquias", committee: /poder local|reforma do estado|autarqu/i },
+];
+
+/** Áreas a que pertencem as comissões indicadas (pela ordem de LAW_AREAS). */
+export function areasForCommittees(names: string[]): string[] {
+  return LAW_AREAS.filter((a) => names.some((n) => a.committee.test(n))).map((a) => a.id);
+}
+
+export interface LawAreaDTO {
+  id: string;
+  label: string;
+  /** Nome oficial da comissão (ou comissões) desta área na legislatura, da mais frequente para a menos. */
+  committees: string[];
+  laws: ProposalOutcomeCounts;
+}
+
+export interface AreasDTO {
+  legislature: string;
+  areas: LawAreaDTO[];
+  /** Contagens sem repetições para as áreas pedidas em ?select= (uma lei pode estar em duas áreas). */
+  selection: ProposalOutcomeCounts | null;
+  /** Leis de comissões que não correspondem a nenhuma área (ex.: Defesa Nacional). */
+  otherCommittees: { name: string; laws: number }[];
+  /** Leis ainda sem comissão competente indicada. */
+  withoutCommittee: number;
 }
 
 // ---------------------------------------------------------------------------

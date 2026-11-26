@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import {
+  LAW_AREAS,
   normalizeSearch,
   STAGES,
   STATUS_META,
@@ -22,6 +23,7 @@ import { config } from "./config.js";
 import { getFreshness } from "./freshness.js";
 import { getLegislature } from "./legislature.js";
 import { getPartyRecord } from "./partyRecord.js";
+import { areaFilter, areasById, getAreas } from "./areas.js";
 import { Composition, Diploma, DreAct, Initiative, SyncRun } from "./models.js";
 import { keyVote, toDetail, toDiploma, toDreAct, toSummary, toSyncRun, toVote } from "./serializers.js";
 import { isSyncRunning, runSync } from "./sync/index.js";
@@ -34,6 +36,7 @@ const LAW_TYPES = TYPE_GROUPS.leis!.codes;
 const SUMMARY_PROJECTION = { events: 0, votes: 0, authorDeputies: 0 } as const;
 const STATUSES = Object.keys(STATUS_META) as [InitiativeStatus, ...InitiativeStatus[]];
 const STAGE_IDS = STAGES.map((s) => s.id) as [InitiativeStage, ...InitiativeStage[]];
+const AREA_IDS = LAW_AREAS.map((a) => a.id) as [string, ...string[]];
 
 /** Ordem de destaque dos atos do Diário da República. */
 const DRE_PRIORITY = ["Lei Orgânica", "Lei", "Decreto-Lei", "Decreto Legislativo Regional", "Resolução da Assembleia da República", "Resolução do Conselho de Ministros", "Decreto do Presidente da República", "Decreto", "Portaria"];
@@ -53,9 +56,9 @@ function cache(seconds: number) {
 
 // --- Iniciativas ---------------------------------------------------------------
 
-/** "a,b" → ["a","b"] (para filtros com vários valores). */
-const csv = <T extends z.ZodType>(item: T) =>
-  z.preprocess((v) => (typeof v === "string" ? v.split(",").map((x) => x.trim()).filter(Boolean) : v), z.array(item).max(10));
+/** "a,b" → ["a","b"] (para filtros com vários valores; até `max`). */
+const csv = <T extends z.ZodType>(item: T, max = 10) =>
+  z.preprocess((v) => (typeof v === "string" ? v.split(",").map((x) => x.trim()).filter(Boolean) : v), z.array(item).max(max));
 
 const listQuery = z.object({
   q: z.string().trim().max(200).optional(),
@@ -67,6 +70,8 @@ const listQuery = z.object({
   explained: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
   theme: z.string().trim().max(60).optional(),
   group: z.string().trim().max(40).optional(),
+  /** Áreas do dia a dia, pela comissão competente (ver areas.ts). */
+  area: csv(z.enum(AREA_IDS), AREA_IDS.length).optional(),
   ids: csv(z.string().regex(/^\d{1,12}$/)).optional(),
   sort: z.enum(["activity", "entered"]).default("activity"),
   page: z.coerce.number().int().min(1).max(10_000).default(1),
@@ -79,7 +84,7 @@ api.get("/initiatives", cache(60), async (req, res) => {
     res.status(400).json({ error: "Parâmetros inválidos", details: parsed.error.issues });
     return;
   }
-  const { q, type, status, stage, party, explained, theme, group, ids, sort, page, pageSize } = parsed.data;
+  const { q, type, status, stage, party, explained, theme, group, area, ids, sort, page, pageSize } = parsed.data;
 
   const filter: Record<string, unknown> = { legislature: getLegislature() };
   if (type !== "todas") filter.typeCode = { $in: TYPE_GROUPS[type]!.codes };
@@ -90,6 +95,7 @@ api.get("/initiatives", cache(60), async (req, res) => {
   if (explained !== undefined) filter["explanation.status"] = explained ? "approved" : { $ne: "approved" };
   if (theme) Object.assign(filter, { "explanation.status": "approved", "explanation.theme": theme });
   if (group) Object.assign(filter, { "explanation.status": "approved", "explanation.affectedGroups.groupId": group });
+  if (area?.length) filter.$and = [areaFilter(area)];
   if (q) {
     const needle = normalizeSearch(q);
     const or: Record<string, unknown>[] = [{ titleSearch: { $regex: escapeRegex(needle) } }];
@@ -110,8 +116,26 @@ api.get("/initiatives", cache(60), async (req, res) => {
     Initiative.countDocuments(filter),
   ]);
 
-  const body: Paginated<InitiativeSummaryDTO> = { items: docs.map(toSummary), total, page, pageSize };
+  const items = docs.map(toSummary);
+  if (area?.length && items.length) {
+    const areas = await areasById(items.map((i) => i.id));
+    for (const item of items) item.areas = areas.get(item.id) ?? [];
+  }
+  const body: Paginated<InitiativeSummaryDTO> = { items, total, page, pageSize };
   res.json(body);
+});
+
+// --- Áreas ("O que muda para mim") ----------------------------------------------
+
+const areasQuery = z.object({ select: csv(z.enum(AREA_IDS), AREA_IDS.length).optional() });
+
+api.get("/areas", cache(300), async (req, res) => {
+  const parsed = areasQuery.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Parâmetros inválidos", details: parsed.error.issues });
+    return;
+  }
+  res.json(await getAreas(getLegislature(), parsed.data.select));
 });
 
 api.get("/initiatives/:id", cache(60), async (req, res) => {

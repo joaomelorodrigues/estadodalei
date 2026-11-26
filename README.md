@@ -64,7 +64,7 @@ Sem explicação revista, o site mostra só os dados oficiais (título, fases, v
 | `plainTitle`, `shortHook` | Título e frase de resumo em todo o site |
 | `kidTranslation`, `summary`, `officialContext` | Separadores "Para Miúdos", "Para o Cidadão", "Texto Oficial" |
 | `beforeAfter[]` (`topic`, `before`, `after`) | "Antes vs. Depois" |
-| `affectedGroups[]` (`groupId`, `label`, `sentiment`, `consequence`, `example`) | "Quem é afetado", "O que muda para ti?", simulador "Afeta-me a mim?" |
+| `affectedGroups[]` (`groupId`, `label`, `sentiment`, `consequence`, `example`) | "Quem é afetado", "O que muda para ti?", simulador por perfil em "O que muda para mim" (só aparece quando há explicações revistas) |
 | `consequences[]`, `debate.pros[]`, `debate.cons[]` | Consequências e argumentos do debate |
 | `theme`, `impactLevel`, `effectiveDate` | Etiquetas e datas |
 
@@ -83,7 +83,8 @@ db.initiatives.updateOne({ _id: "315160" }, { $set: { explanation: {
 | Rota | Descrição |
 |---|---|
 | `GET /api/today` | Resumo: atos do DR mais recentes, últimas votações, leis aprovadas, publicadas e novas, contagens |
-| `GET /api/initiatives?q=&type=leis\|resolucoes\|outras\|todas&status=&stage=&party=&explained=&group=&theme=&ids=&sort=activity\|entered&page=` | Lista paginada (`status`, `stage` e `ids` aceitam vários valores separados por vírgulas) |
+| `GET /api/initiatives?q=&type=leis\|resolucoes\|outras\|todas&status=&stage=&party=&explained=&group=&theme=&area=&ids=&sort=activity\|entered&page=` | Lista paginada (`status`, `stage`, `area` e `ids` aceitam vários valores separados por vírgulas) |
+| `GET /api/areas?select=` | Leis por área do dia a dia ("O que muda para mim"), pela comissão competente indicada pela AR; com `select`, as contagens sem repetições das áreas escolhidas |
 | `GET /api/initiatives/:id` | Detalhe com fases, votações, diplomas e atos do DR |
 | `GET /api/highlights?limit=` | Leis por aprovar (já passaram na generalidade), aprovadas e chumbadas, com a votação decisiva e os totais |
 | `GET /api/party-record` | Balanço por partido na legislatura: leis propostas e o destino delas, sentido de voto, e a evolução mês a mês |

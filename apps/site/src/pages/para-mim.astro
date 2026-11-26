@@ -1,26 +1,35 @@
 ---
 import MainLayout from "@/layouts/MainLayout.astro";
+import { LawsByArea } from "@/components/LawsByArea";
 import { PersonalImpactSimulator } from "@/components/PersonalImpactSimulator";
-import type { InitiativeSummaryDTO, Paginated } from "@estadodalei/shared";
+import type { AreasDTO, InitiativeSummaryDTO, Paginated } from "@estadodalei/shared";
 import ApiUnavailable from "@/components/ApiUnavailable.astro";
 import { api } from "@/lib/api";
 import { toProposal } from "@/lib/adapt";
 
-let proposals: ReturnType<typeof toProposal>[] | null = null;
+let areas: AreasDTO | null = null;
+let proposals: ReturnType<typeof toProposal>[] = [];
 try {
-  // Só iniciativas com explicação revista dizem quem é afetado.
-  const page = await api<Paginated<InitiativeSummaryDTO>>("/initiatives?explained=true&pageSize=50");
+  // Leis por área (comissão competente indicada pela AR) e, quando existirem,
+  // as explicações revistas que dizem quem é afetado.
+  const [areaData, page] = await Promise.all([
+    api<AreasDTO>("/areas"),
+    api<Paginated<InitiativeSummaryDTO>>("/initiatives?explained=true&pageSize=50"),
+  ]);
+  areas = areaData;
   proposals = page.items.map((s) => toProposal(s));
 } catch (err) {
   console.error("[para-mim] API indisponível:", err);
   Astro.response.status = 503;
 }
+// O simulador por perfil só aparece quando houver explicações revistas.
+const hasExplanations = proposals.some((p) => p.affectedGroups.length > 0);
 Astro.response.headers.set("Cache-Control", "public, max-age=60");
 ---
 
 <MainLayout
-  title="Afeta-me a Mim? — Simulador Legislativo | estadodalei.pt"
-  description="Escolhe o teu perfil e descobre imediatamente quais as leis aprovadas ou em votação em Portugal que afetam a tua carteira e os teus direitos."
+  title="O que muda para mim — leis por área | estadodalei.pt"
+  description="Escolhe as áreas que te dizem respeito (trabalho, casa, saúde, escola…) e vê as leis aprovadas, em discussão e chumbadas na Assembleia da República."
   currentPath="/para-mim"
 >
   <section class="bg-[#135BFF] text-white">
@@ -33,13 +42,14 @@ Astro.response.headers.set("Cache-Control", "public, max-age=60");
           O que é que estas leis mudam para mim?
         </h1>
         <p class="text-sm sm:text-base text-blue-100 leading-relaxed font-medium">
-          Não precisas de ler dezenas de documentos oficiais. Indica a tua situação (trabalho, casa, idade, família) e mostramos as leis que, segundo explicações revistas, têm impacto direto na tua vida.
+          Não precisas de ler dezenas de documentos oficiais. Escolhe as áreas da tua vida (trabalho, casa, saúde, escola…) e mostramos as leis que a Assembleia da República aprovou, está a discutir ou chumbou em cada uma.
         </p>
       </div>
     </div>
   </section>
 
-  <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-    {proposals ? <PersonalImpactSimulator client:load proposals={proposals} /> : <ApiUnavailable />}
+  <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 space-y-12">
+    {areas ? <LawsByArea client:load data={areas} /> : <ApiUnavailable />}
+    {hasExplanations && <PersonalImpactSimulator client:visible proposals={proposals} />}
   </div>
 </MainLayout>
