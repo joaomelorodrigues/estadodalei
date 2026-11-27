@@ -295,7 +295,13 @@ export class HemicycleScene {
   private c = new Color();
 
   constructor() {
-    this.renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: "low-power" });
+    // Sem aceleração gráfica o contexto falha e fica o SVG (ver hasFastWebGL em Hemicycle3D).
+    this.renderer = new WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "low-power",
+      failIfMajorPerformanceCaveat: true,
+    });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.shadowMap.enabled = true;

@@ -141,6 +141,29 @@ type SceneModule = typeof import("@/lib/hemicycleScene");
 /** O módulo 3D, depois de carregado (fica para os próximos hemiciclos da página). */
 let sceneModule: SceneModule | null = null;
 
+/** Renderizadores WebGL que desenham no CPU (sem placa gráfica). */
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i;
+
+/**
+ * Há WebGL 2 com aceleração gráfica? Sem ela (WebGL desenhado no CPU, como em computadores
+ * sem placa gráfica, máquinas virtuais ou nas máquinas do PageSpeed Insights), compilar os
+ * shaders e desenhar o 3D bloqueia a página durante segundos: aí fica o desenho em SVG e o
+ * three.js nem se descarrega. O failIfMajorPerformanceCaveat apanha o caso habitual; o nome
+ * do renderizador apanha o SwiftShader quando o browser o ativa de propósito.
+ */
+function hasFastWebGL(): boolean {
+  try {
+    const gl = document.createElement("canvas").getContext("webgl2", { failIfMajorPerformanceCaveat: true });
+    if (!gl) return false;
+    const info = gl.getExtension("WEBGL_debug_renderer_info");
+    const renderer = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? "");
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    return !SOFTWARE_RENDERER.test(renderer);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Se nenhum lugar do grupo estiver livre, o ponto fica logo ao lado, com uma haste: posições em
  * dois anéis, das mais próximas para as mais afastadas e, a igual distância, primeiro as de cima.
@@ -228,6 +251,9 @@ export function Hemicycle3D({
     const nextTask = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
     const load = async () => {
       try {
+        if (!hasFastWebGL()) return; // fica o desenho em SVG
+        await nextTask();
+        if (!alive) return;
         const m = await import("@/lib/hemicycleScene");
         await nextTask();
         if (!alive) return;
