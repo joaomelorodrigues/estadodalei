@@ -26,9 +26,10 @@
 #   POSTHOG_HOST=https://eu.i.posthog.com      (por omissão, a PostHog na UE)
 #
 # Os sites no NAS usam as portas 20000-20099, uma por site. O público chega pelo
-# proxy inverso do DSM (domínio:443 -> localhost:HOST_PORT). As regras de 80 e 443
-# enviam o cabeçalho X-Forwarded-Proto: $scheme, e a aplicação redireciona
-# http:// e www. para https://<domínio>.
+# Nginx Proxy Manager do NAS (o router envia 80/443 para ele), com um proxy host
+# por domínio -> http://<ip-do-nas-na-rede-local>:HOST_PORT, certificado Let's Encrypt
+# e "Force SSL". O NPM envia o cabeçalho X-Forwarded-Proto, e a aplicação
+# redireciona http:// e www. para https://<domínio>.
 #
 # Cada definição abaixo pode ser substituída por uma variável de ambiente com o mesmo nome.
 
@@ -180,6 +181,19 @@ deploy_stack() {
       '{stackFileContent: $file, env: $env, prune: true, pullImage: false}' |
       stack_request PUT "${PORTAINER_URL}/api/stacks/${STACK_ID}?endpointId=${PORTAINER_ENDPOINT_ID}" >/dev/null
   fi
+  wait_stack
+}
+
+# O Portainer (2.45) aplica a stack em segundo plano: o pedido responde com a stack
+# no estado 3 (a aplicar) antes de o docker compose ter criado os contentores.
+wait_stack() {
+  local deadline=$((SECONDS + 600)) st=""
+  while (( SECONDS < deadline )); do
+    st="$(api "${PORTAINER_URL}/api/stacks/${STACK_ID}" | jq -r '.Status // empty' || true)"
+    [[ -n "$st" && "$st" != "3" ]] && break
+    sleep 3
+  done
+  [[ "$st" == "1" ]] || { echo "O Portainer não acabou de aplicar a stack (estado '${st}'). Ver a stack ${STACK} no Portainer." >&2; exit 1; }
 }
 
 app_container() { # id do contentor do serviço app desta stack
@@ -205,7 +219,9 @@ api -X POST "${DOCKER}/images/prune?filters=%7B%22dangling%22%3A%5B%22true%22%5D
 echo "→ À espera do site"
 deadline=$((SECONDS + 240)); status=""
 while (( SECONDS < deadline )); do
-  status="$(api "${DOCKER}/containers/${APP}/json" | jq -r '.State.Health.Status // .State.Status')"
+  APP="$(app_container || true)"  # procura-o de novo: o compose pode tê-lo substituído
+  status=""
+  [[ -n "$APP" ]] && status="$(api "${DOCKER}/containers/${APP}/json" | jq -r '.State.Health.Status // .State.Status' || true)"
   [[ "$status" == "healthy" ]] && break
   sleep 5
 done
