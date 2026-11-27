@@ -18,7 +18,15 @@ const host = process.env.POSTHOG_HOST?.trim() || "https://eu.i.posthog.com";
 <script>
   const meta = document.querySelector<HTMLMetaElement>('meta[name="posthog"]');
   const key = meta?.dataset.key;
-  if (key) {
+  // A posthog-js tem ~130 KB: só a carrega depois do load, de a página já ter sido
+  // pintada (dois frames) e com o browser livre, para não competir com a primeira
+  // pintura (LCP) nem com a hidratação. Num servidor rápido o load chega antes da pintura.
+  const whenIdle = (fn: () => void) =>
+    "requestIdleCallback" in window ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 1);
+  const afterPaint = (fn: () => void) => requestAnimationFrame(() => requestAnimationFrame(() => whenIdle(fn)));
+  const afterLoad = (fn: () => void) =>
+    document.readyState === "complete" ? afterPaint(fn) : addEventListener("load", () => afterPaint(fn), { once: true });
+  if (key) afterLoad(() => {
     import("posthog-js").then(({ default: posthog }) => {
       posthog.init(key, {
         api_host: meta.dataset.host,
@@ -30,5 +38,5 @@ const host = process.env.POSTHOG_HOST?.trim() || "https://eu.i.posthog.com";
         disable_external_dependency_loading: true,
       });
     });
-  }
+  });
 </script>
