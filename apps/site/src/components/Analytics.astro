@@ -18,15 +18,28 @@ const host = process.env.POSTHOG_HOST?.trim() || "https://eu.i.posthog.com";
 <script>
   const meta = document.querySelector<HTMLMetaElement>('meta[name="posthog"]');
   const key = meta?.dataset.key;
-  // A posthog-js tem ~130 KB: só a carrega depois do load, de a página já ter sido
-  // pintada (dois frames) e com o browser livre, para não competir com a primeira
-  // pintura (LCP) nem com a hidratação. Num servidor rápido o load chega antes da pintura.
+  // A posthog-js (~130 KB) e o arranque dela (configuração remota, autocaptura) ficam
+  // para o fim: depois do load, da primeira pintura com conteúdo tal como o browser a
+  // regista (o momento em que aparece no ecrã, que pode vir depois dos frames do
+  // requestAnimationFrame) e de START_DELAY_MS com o browser livre. Assim não compete
+  // com o LCP nem junta trabalho às tarefas da hidratação e do hemiciclo 3D (TBT).
+  // Custo: visitas de menos de ~2 s não são contadas.
+  const START_DELAY_MS = 2000;
   const whenIdle = (fn: () => void) =>
     "requestIdleCallback" in window ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 1);
-  const afterPaint = (fn: () => void) => requestAnimationFrame(() => requestAnimationFrame(() => whenIdle(fn)));
   const afterLoad = (fn: () => void) =>
-    document.readyState === "complete" ? afterPaint(fn) : addEventListener("load", () => afterPaint(fn), { once: true });
-  if (key) afterLoad(() => {
+    document.readyState === "complete" ? fn() : addEventListener("load", fn, { once: true });
+  const afterFirstPaint = (fn: () => void) => {
+    const fcp = () => performance.getEntriesByName("first-contentful-paint").length > 0;
+    if (!PerformanceObserver.supportedEntryTypes?.includes("paint") || fcp()) return fn();
+    const observer = new PerformanceObserver(() => {
+      if (!fcp()) return;
+      observer.disconnect();
+      fn();
+    });
+    observer.observe({ type: "paint", buffered: true });
+  };
+  if (key) afterLoad(() => afterFirstPaint(() => setTimeout(() => whenIdle(() => {
     import("posthog-js").then(({ default: posthog }) => {
       posthog.init(key, {
         api_host: meta.dataset.host,
@@ -38,5 +51,5 @@ const host = process.env.POSTHOG_HOST?.trim() || "https://eu.i.posthog.com";
         disable_external_dependency_loading: true,
       });
     });
-  });
+  }), START_DELAY_MS)));
 </script>
