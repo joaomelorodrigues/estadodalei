@@ -1,4 +1,5 @@
 // @ts-check
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "astro/config";
 import node from "@astrojs/node";
 import react from "@astrojs/react";
@@ -12,7 +13,17 @@ export default defineConfig({
   // Em produção o Express (apps/api) monta o handler gerado (modo "middleware").
   output: "server",
   adapter: node({ mode: "middleware" }),
-  integrations: [react()],
+  integrations: [
+    react(),
+    {
+      // client:painted: hidrata depois da primeira pintura (ver src/directives/painted.ts).
+      name: "client-painted",
+      hooks: {
+        "astro:config:setup": ({ addClientDirective }) =>
+          addClientDirective({ name: "painted", entrypoint: fileURLToPath(new URL("./src/directives/painted.ts", import.meta.url)) }),
+      },
+    },
+  ],
   vite: {
     plugins: [tailwindcss()],
     build: {
