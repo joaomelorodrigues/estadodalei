@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Gera public/og-image.jpg (1200×630, JPEG para ficar bem abaixo dos ~300 KB que o WhatsApp aceita): a imagem das pré-visualizações quando alguém
+ * Gera src/assets/og-image.jpg (1200×630, JPEG para ficar bem abaixo dos ~300 KB que o WhatsApp aceita): a imagem das pré-visualizações quando alguém
  * partilha um link do site (WhatsApp, Facebook, LinkedIn, X…).
  *
  * Desenha a página em HTML, com as fontes e as cores do site, e tira-lhe uma captura
@@ -17,7 +17,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const out = join(here, "..", "public", "og-image.jpg");
+const out = join(here, "..", "src", "assets", "og-image.jpg");
 const chrome = process.env.CHROME ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 const require = createRequire(import.meta.url);
@@ -72,8 +72,8 @@ const html = `<!doctype html>
 </style></head><body>
   <div class="text">
     <div class="logo">estadodalei<span>.pt</span></div>
-    <h1>As leis de Portugal<br />explicadas para todos</h1>
-    <p>O que se discute e vota no Parlamento, em português simples e com dados oficiais.</p>
+    <h1>Em que estado<br />está cada lei</h1>
+    <p>O que está em discussão, o que foi aprovado e o que foi chumbado no Parlamento, com dados oficiais.</p>
   </div>
   <svg viewBox="28 2 364 196" aria-hidden="true">
     <defs>

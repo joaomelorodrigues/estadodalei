@@ -1,6 +1,6 @@
 # estadodalei.pt
 
-Serviço cívico independente que acompanha as propostas da Assembleia da República e as leis publicadas no Diário da República, e as explica em português simples.
+Serviço cívico independente que acompanha as propostas da Assembleia da República e as leis publicadas no Diário da República, para que todos saibam em que estado está cada lei.
 
 - **Só dados oficiais.** Estado, votações, datas e autores vêm sempre das fontes oficiais, sincronizados automaticamente. Nada é escrito à mão nem gerado por IA.
 - **Explicações revistas.** O texto em linguagem simples só aparece depois de revisto por uma pessoa.
