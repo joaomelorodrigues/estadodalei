@@ -13,6 +13,12 @@ export default defineConfig({
   // Em produção o Express (apps/api) monta o handler gerado (modo "middleware").
   output: "server",
   adapter: node({ mode: "middleware" }),
+  // Domínios em que o Astro confia no cabeçalho Host (e X-Forwarded-*): sem esta lista,
+  // Astro.url fica sempre "localhost" e o canónico e o og:image apontavam para lá.
+  // localhost serve para as medições locais (ex.: localhost:4100).
+  security: {
+    allowedDomains: [{ hostname: "estadodalei.pt" }, { hostname: "www.estadodalei.pt" }, { hostname: "localhost" }],
+  },
   integrations: [
     react(),
     {
